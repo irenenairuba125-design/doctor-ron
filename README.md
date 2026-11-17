@@ -67,6 +67,27 @@ Open http://127.0.0.1:8000/
 
 **Demo accounts** (after `seed_demo`): `admin`, `doctor`, `nurse`, `receptionist`, `lab_technician`, `pharmacist`, `accountant`. The password for all of them is `Hospital@123`.
 
+## Live deployment (Vercel + Neon Postgres)
+
+Live site: https://doctor-ron.vercel.app (log in as `admin` / `hospital123`).
+
+- Hosted on Vercel (`vercel.json`, entry point `hms/wsgi.py`). Static files are served by WhiteNoise.
+- Data is stored permanently in a Neon Postgres database connected through the Vercel Marketplace.
+  Vercel provides its connection string as `DATABASE_URL`; when that variable is set, Django uses Postgres.
+- `DJANGO_SECRET_KEY` and `DJANGO_DEBUG=0` are set as Vercel environment variables (not in the code).
+
+Redeploy after changes:
+
+```bash
+vercel deploy --prod
+```
+
+Run migrations against the online database (connection string from `vercel env pull`):
+
+```powershell
+$env:DATABASE_URL="<DATABASE_URL_UNPOOLED value>"; python manage.py migrate
+```
+
 ## URLs
 
 - `/`: dashboard with stats, today's appointments, ward occupancy, stock alerts, and revenue for accountants

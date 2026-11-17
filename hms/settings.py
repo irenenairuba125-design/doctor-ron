@@ -1,7 +1,8 @@
 """Django settings for the Hospital Management System (HMS).
 
 Database is MySQL by default. Configure it with environment variables:
-    DB_ENGINE=mysql | sqlite   (default: mysql)
+    DB_ENGINE=mysql | sqlite | postgres   (default: postgres if DATABASE_URL is set, else mysql)
+    DATABASE_URL                          (for postgres, e.g. Neon on Vercel)
     DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
 """
 import os
@@ -83,9 +84,31 @@ TEMPLATES = [
 WSGI_APPLICATION = "hms.wsgi.application"
 
 # ---------------------------------------------------------------- Database
-DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite" if ON_VERCEL else "mysql").lower()
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+DB_ENGINE = os.environ.get(
+    "DB_ENGINE", "postgres" if DATABASE_URL else "sqlite" if ON_VERCEL else "mysql"
+).lower()
 
-if DB_ENGINE == "sqlite":
+if DB_ENGINE == "postgres":
+    # Hosted Postgres (Neon on Vercel). DATABASE_URL looks like
+    # postgres://user:password@host/dbname?sslmode=require
+    from urllib.parse import parse_qsl, unquote, urlparse
+    _u = urlparse(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _u.path.lstrip("/"),
+            "USER": unquote(_u.username or ""),
+            "PASSWORD": unquote(_u.password or ""),
+            "HOST": _u.hostname,
+            "PORT": _u.port or 5432,
+            "OPTIONS": {"sslmode": dict(parse_qsl(_u.query)).get("sslmode", "require")},
+            "CONN_MAX_AGE": 0,
+            # Neon's pooled URL goes through PgBouncer (transaction mode)
+            "DISABLE_SERVER_SIDE_CURSORS": True,
+        }
+    }
+elif DB_ENGINE == "sqlite":
     SQLITE_PATH = BASE_DIR / "db.sqlite3"
     if ON_VERCEL:
         # The deployment bundle is read-only: work on a copy in /tmp.
