@@ -63,6 +63,8 @@ python manage.py runserver
 
 Open http://127.0.0.1:8000/
 
+**Included sample database:** the repository ships with `db.sqlite3`, already filled with demo data. Run with `$env:DB_ENGINE="sqlite"; python manage.py runserver` and log in as `admin` (or any demo account below) with the password `hospital123`.
+
 **Demo accounts** (after `seed_demo`): `admin`, `doctor`, `nurse`, `receptionist`, `lab_technician`, `pharmacist`, `accountant`. The password for all of them is `Hospital@123`.
 
 ## URLs
