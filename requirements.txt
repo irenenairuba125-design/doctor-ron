@@ -1,3 +1,6 @@
 Django>=5.2
 djangorestframework>=3.15
-mysqlclient>=2.2
+whitenoise>=6.6
+# MySQL driver. Limited to Windows so cloud hosts (Vercel) that use SQLite can install the rest;
+# on Linux/macOS with MySQL run: pip install mysqlclient
+mysqlclient>=2.2; platform_system == "Windows"

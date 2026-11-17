@@ -16,6 +16,16 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# Running on Vercel (serverless): read-only filesystem, HTTPS, *.vercel.app domain
+ON_VERCEL = bool(os.environ.get("VERCEL"))
+if ON_VERCEL:
+    ALLOWED_HOSTS += [".vercel.app"]
+    CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
+    # Sessions live in signed cookies so logins work across serverless instances
+    SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -43,6 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -72,13 +83,22 @@ TEMPLATES = [
 WSGI_APPLICATION = "hms.wsgi.application"
 
 # ---------------------------------------------------------------- Database
-DB_ENGINE = os.environ.get("DB_ENGINE", "mysql").lower()
+DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite" if ON_VERCEL else "mysql").lower()
 
 if DB_ENGINE == "sqlite":
+    SQLITE_PATH = BASE_DIR / "db.sqlite3"
+    if ON_VERCEL:
+        # The deployment bundle is read-only: work on a copy in /tmp.
+        # Changes last only as long as the serverless instance (demo use).
+        import shutil
+        tmp_db = Path("/tmp/db.sqlite3")
+        if not tmp_db.exists():
+            shutil.copyfile(SQLITE_PATH, tmp_db)
+        SQLITE_PATH = tmp_db
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": SQLITE_PATH,
         }
     }
 else:
@@ -117,6 +137,8 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# WhiteNoise serves static files straight from the app/static folders (no collectstatic needed)
+WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

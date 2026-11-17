@@ -1,0 +1,10 @@
+{
+  "builds": [
+    {
+      "src": "hms/wsgi.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["db.sqlite3", "templates/**", "static/**"] }
+    }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "hms/wsgi.py" }]
+}
